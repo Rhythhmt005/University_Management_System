@@ -21,6 +21,9 @@ public:
     }
 
     virtual double calculatePayment() const { return 0.0; }
+
+    string getId() const { return id; }
+    string getName() const { return name; }
 };
 
 // ========================
@@ -48,32 +51,6 @@ public:
     double calculatePayment() const override { return 5000.0; }
 };
 
-class UndergraduateStudent : public Student {
-    string major, minor, graduationDate;
-
-public:
-    UndergraduateStudent(string n, int a, string i, string prog, double g, string maj, string min, string grad)
-        : Student(n, a, i, prog, g), major(maj), minor(min), graduationDate(grad) {}
-
-    void displayDetails() const override {
-        Student::displayDetails();
-        cout << "Major: " << major << ", Minor: " << minor << ", Graduation: " << graduationDate << endl;
-    }
-};
-
-class GraduateStudent : public Student {
-    string researchTopic, advisor, thesisTitle;
-
-public:
-    GraduateStudent(string n, int a, string i, string prog, double g, string topic, string adv, string thesis)
-        : Student(n, a, i, prog, g), researchTopic(topic), advisor(adv), thesisTitle(thesis) {}
-
-    void displayDetails() const override {
-        Student::displayDetails();
-        cout << "Research: " << researchTopic << ", Advisor: " << advisor << ", Thesis: " << thesisTitle << endl;
-    }
-};
-
 // ========================
 // Professor Hierarchy
 // ========================
@@ -89,43 +66,9 @@ public:
         cout << "Department: " << department << endl;
     }
 
-    double calculatePayment() const override { return 70000.0; }
-};
-
-class AssistantProfessor : public Professor {
-public:
-    AssistantProfessor(string n, int a, string i, string dept) : Professor(n, a, i, dept) {}
-
-    double calculatePayment() const override { return 60000.0; }
-
-    void displayDetails() const override {
-        Professor::displayDetails();
-        cout << "Rank: Assistant Professor" << endl;
-    }
-};
-
-class AssociateProfessor : public Professor {
-public:
-    AssociateProfessor(string n, int a, string i, string dept) : Professor(n, a, i, dept) {}
-
     double calculatePayment() const override { return 80000.0; }
 
-    void displayDetails() const override {
-        Professor::displayDetails();
-        cout << "Rank: Associate Professor" << endl;
-    }
-};
-
-class FullProfessor : public Professor {
-public:
-    FullProfessor(string n, int a, string i, string dept) : Professor(n, a, i, dept) {}
-
-    double calculatePayment() const override { return 100000.0; }
-
-    void displayDetails() const override {
-        Professor::displayDetails();
-        cout << "Rank: Full Professor" << endl;
-    }
+    string getDepartment() const { return department; }
 };
 
 // ========================
@@ -144,6 +87,8 @@ public:
         cout << "\nDepartment: " << name << "\nProfessors:\n";
         for (auto& p : professors) p->displayDetails();
     }
+
+    string getName() const { return name; }
 };
 
 // ========================
@@ -157,9 +102,10 @@ public:
     Course(string c, string t, shared_ptr<Professor> prof) : code(c), title(t), instructor(prof) {}
 
     void displayCourse() const {
-        cout << "\nCourse: " << title << " (" << code << ")\nInstructor: ";
-        instructor->displayDetails();
+        cout << "\nCourse: " << title << " (" << code << ")\nInstructor: " << instructor->getName() << endl;
     }
+
+    string getCode() const { return code; }
 };
 
 // ========================
@@ -169,10 +115,11 @@ class Classroom {
     string roomNumber;
 
 public:
-    Classroom() : roomNumber("Unknown") {} // ✅ Default constructor
+    Classroom() : roomNumber("Unknown") {}
     Classroom(string rn) : roomNumber(rn) {}
 
     void displayClassroom() const { cout << "Classroom: " << roomNumber << endl; }
+    string getRoomNumber() const { return roomNumber; }
 };
 
 class Schedule {
@@ -196,12 +143,135 @@ public:
 // ========================
 class University {
     vector<Department> departments;
+    vector<shared_ptr<Student>> students;
+    vector<shared_ptr<Professor>> professors;
+    vector<shared_ptr<Course>> courses;
+    vector<shared_ptr<Classroom>> classrooms;
+    Schedule schedule;
 
 public:
-    void addDepartment(const Department& dept) { departments.push_back(dept); }
+    void addDepartment() {
+        string name;
+        cout << "Enter department name: ";
+        cin.ignore();
+        getline(cin, name);
+        Department dept(name);
 
-    void displayUniversity() const {
-        for (auto& dept : departments) dept.displayDepartment();
+        if (!professors.empty()) {
+            cout << "Assign professors to this department (enter indexes, -1 to stop):\n";
+            for (size_t i = 0; i < professors.size(); ++i)
+                cout << i + 1 << ". " << professors[i]->getName() << " (" << professors[i]->getDepartment() << ")\n";
+
+            int profChoice;
+            while (cin >> profChoice && profChoice != -1) {
+                if (profChoice >= 1 && profChoice <= professors.size())
+                    dept.addProfessor(professors[profChoice - 1]);
+                else
+                    cout << "Invalid choice.\n";
+            }
+        }
+
+        departments.push_back(dept);
+    }
+
+    void addProfessor() {
+        string name, id, dept;
+        int age;
+        cout << "Enter professor name: ";
+        cin.ignore();
+        getline(cin, name);
+        cout << "Enter age: "; cin >> age;
+        cout << "Enter ID: "; cin >> id;
+        cout << "Enter department: "; cin.ignore(); getline(cin, dept);
+
+        professors.push_back(make_shared<Professor>(name, age, id, dept));
+    }
+
+    void addStudent() {
+        string name, id, program;
+        int age;
+        double gpa;
+        cout << "Enter student name: ";
+        cin.ignore();
+        getline(cin, name);
+        cout << "Enter age: "; cin >> age;
+        cout << "Enter ID: "; cin >> id;
+        cout << "Enter program: "; cin >> program;
+        cout << "Enter GPA: "; cin >> gpa;
+
+        students.push_back(make_shared<Student>(name, age, id, program, gpa));
+    }
+
+    void addCourse() {
+        if (professors.empty()) {
+            cout << "No professors available. Add professor first.\n";
+            return;
+        }
+
+        string code, title;
+        cout << "Enter course code: ";
+        cin >> code;
+        cout << "Enter course title: ";
+        cin.ignore();
+        getline(cin, title);
+
+        cout << "Select instructor:\n";
+        for (size_t i = 0; i < professors.size(); ++i)
+            cout << i + 1 << ". " << professors[i]->getName() << endl;
+
+        int profChoice;
+        cin >> profChoice;
+        if (profChoice >= 1 && profChoice <= professors.size()) {
+            courses.push_back(make_shared<Course>(code, title, professors[profChoice - 1]));
+            cout << "Course added successfully.\n";
+        } else {
+            cout << "Invalid professor choice.\n";
+        }
+    }
+
+    void addClassroom() {
+        string room;
+        cout << "Enter classroom number: ";
+        cin >> room;
+        classrooms.push_back(make_shared<Classroom>(room));
+    }
+
+    void assignClassroomToCourse() {
+        if (courses.empty() || classrooms.empty()) {
+            cout << "Courses or Classrooms list is empty.\n";
+            return;
+        }
+
+        cout << "Select course:\n";
+        for (size_t i = 0; i < courses.size(); ++i)
+            cout << i + 1 << ". " << courses[i]->getCode() << endl;
+
+        int courseChoice;
+        cin >> courseChoice;
+
+        cout << "Select classroom:\n";
+        for (size_t i = 0; i < classrooms.size(); ++i)
+            cout << i + 1 << ". " << classrooms[i]->getRoomNumber() << endl;
+
+        int roomChoice;
+        cin >> roomChoice;
+
+        if (courseChoice >= 1 && courseChoice <= courses.size() &&
+            roomChoice >= 1 && roomChoice <= classrooms.size()) {
+            schedule.addSchedule(courses[courseChoice - 1]->getCode(), classrooms[roomChoice - 1]);
+            cout << "Classroom assigned to course.\n";
+        } else {
+            cout << "Invalid choices.\n";
+        }
+    }
+
+    void displayAll() const {
+        cout << "\n--- University Data ---\n";
+        for (const auto& dept : departments) dept.displayDepartment();
+        for (const auto& course : courses) course->displayCourse();
+        for (const auto& student : students) student->displayDetails();
+        for (const auto& room : classrooms) room->displayClassroom();
+        schedule.displaySchedule();
     }
 };
 
@@ -209,44 +279,35 @@ public:
 // Main Test Program
 // ========================
 int main() {
-    try {
-        // Professors
-        auto prof1 = make_shared<AssistantProfessor>("Dr. Green", 40, "P001", "Engineering");
-        auto prof2 = make_shared<FullProfessor>("Dr. Blue", 55, "P002", "Science");
+    University uni;
+    int choice;
 
-        // Departments
-        Department engineering("Engineering");
-        engineering.addProfessor(prof1);
-        Department science("Science");
-        science.addProfessor(prof2);
+    do {
+        cout << "\n--- University Management System ---\n";
+        cout << "1. Add Department\n";
+        cout << "2. Add Professor\n";
+        cout << "3. Add Student\n";
+        cout << "4. Add Course\n";
+        cout << "5. Add Classroom\n";
+        cout << "6. Assign Classroom to Course\n";
+        cout << "7. Display All Data\n";
+        cout << "0. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
 
-        // University
-        University uni;
-        uni.addDepartment(engineering);
-        uni.addDepartment(science);
+        switch (choice) {
+            case 1: uni.addDepartment(); break;
+            case 2: uni.addProfessor(); break;
+            case 3: uni.addStudent(); break;
+            case 4: uni.addCourse(); break;
+            case 5: uni.addClassroom(); break;
+            case 6: uni.assignClassroomToCourse(); break;
+            case 7: uni.displayAll(); break;
+            case 0: cout << "Exiting system. Goodbye!\n"; break;
+            default: cout << "Invalid choice. Try again.\n";
+        }
 
-        // Students
-        UndergraduateStudent ugStudent("Alice", 20, "S001", "Engineering", 3.7, "Computer Eng", "Math", "2025");
-        GraduateStudent gradStudent("Bob", 24, "S002", "Science", 3.9, "AI Research", "Dr. Blue", "AI in Robotics");
-
-        // Course & Classroom
-        Course cs101("CS101", "Intro to CS", prof1);
-        auto room101 = make_shared<Classroom>("Room 101");
-
-        // Schedule
-        Schedule schedule;
-        schedule.addSchedule("CS101", room101);
-
-        // Display everything
-        uni.displayUniversity();
-        cs101.displayCourse();
-        ugStudent.displayDetails();
-        gradStudent.displayDetails();
-        schedule.displaySchedule();
-
-    } catch (exception& e) {
-        cerr << "Error: " << e.what() << endl;
-    }
+    } while (choice != 0);
 
     return 0;
 }
